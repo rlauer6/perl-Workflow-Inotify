@@ -1,0 +1,9 @@
+[watch_example]
+dir = /somedir
+mask = IN_CLOSE_WRITE
+handler = Workflow::Inotify::Handler
+
+[global]
+sleep = 0
+block = 1
+logfile = /var/log/inotify.log

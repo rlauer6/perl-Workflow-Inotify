@@ -1,0 +1,172 @@
+#!@perlrun@
+
+use warnings;
+use strict;
+
+use Carp;
+use Config::IniFiles;
+
+use Data::Dumper;
+use Getopt::Long;
+
+use IO::Handle;
+use Linux::Inotify2;
+
+use Proc::Daemon;
+use Proc::PID::File;
+
+sub setup_signal_handlers {
+  my $keep_going = shift;
+
+  $SIG{HUP}  = sub { 
+    print STDERR "Caught SIGHUP:  nothing implemented.\n"; 
+    
+    $$keep_going = 1;
+  };
+
+  $SIG{INT}  = sub { print STDERR ("Caught SIGINT:  exiting gracefully\n");
+		     $$keep_going = 0; 
+		   };
+
+  $SIG{QUIT} = sub { print STDERR ("Caught SIGQUIT:  exiting gracefully\n"); 
+		     $$keep_going = 0; 
+		   };
+  
+  $SIG{TERM} = sub { print STDERR ("Caught SIGTERM:  exiting gracefully\n"); 
+		     $$keep_going = 0;
+		   };
+}
+
+sub setup_watch_directories {
+  my $config = shift;
+  my $inotify = shift;
+  my $watch_handlers = shift;
+
+  my @watch_dirs = $config->Sections();
+
+  foreach my $wd (@watch_dirs) {
+    next unless $wd =~/^watch_(.*)$/;
+    my $watch_name = $1;
+
+    my $events = eval $config->val($wd, 'mask');
+    die "no events specified in $wd section\n"
+      unless $events;
+    
+    my $dir = $config->val($wd, 'dir');
+    die "no directory specified for section $wd\n"
+      unless $dir;
+    
+    die "directory [$dir] does not exist\n"
+      unless -d $dir;
+    
+    my $handler_class = $config->val($wd, 'handler');
+    die "no handler defined\n"
+      unless $handler_class;
+    
+    # get the handler for this directory and set up the callback
+    my $handler;
+    
+    eval "require $handler_class;";
+    die $@
+      if $@;
+    
+    eval "\$handler = $handler_class->new(\$config);";
+    die $@
+      if $@;
+
+    die "your class must have a handler() method\n"
+      unless $handler->can('handler');
+    
+    print STDERR "setting up handler for $dir to " . ref($handler) . "\n";
+    
+    my $w = $inotify->watch($dir, $events, sub { $handler->handler(shift); });
+    $watch_handlers->{$watch_name} = $w;
+  }
+}
+
+# +-------------------------+
+# | MAIN PROGRAM START HERE |
+# +-------------------------+
+
+my $LOGFILE;
+my $CONFIG;
+my %watch_handlers;
+
+GetOptions("logfile=s", \$LOGFILE, "config=s", \$CONFIG);
+$CONFIG = $CONFIG || '/etc/workflow/inotify.cfg';
+
+die "no config file found!\n"
+  unless -s $CONFIG;
+
+my $config = Config::IniFiles->new(-file => $CONFIG);
+
+my $perl5lib = $config->val('global', 'perl5lib');
+push @INC, $perl5lib
+  if $perl5lib;
+
+# set up signal handlers
+my $keep_going = 1;
+
+Proc::Daemon::Init;
+
+# note that version 0.14 of Proc::Daemon will open STDOUT/STDERR and redirect to 
+# a file for you, CentOS 5 has version 0.03 which opens STDOUT/STDERR to /dev/null
+# thus we need to re-open...
+
+setup_signal_handlers( \$keep_going);
+
+autoflush STDOUT 1;
+autoflush STDERR 1;
+
+$LOGFILE = $LOGFILE || $config->val('global', 'logfile');
+open(STDOUT, '+>>' . $LOGFILE);
+open(STDERR, '+>>&STDOUT');
+
+# If already running, then exit
+if ( Proc::PID::File->running() ) {
+  exit(0);
+}
+
+print STDERR "Starting...\n";
+
+my $inotify = new Linux::Inotify2;
+
+setup_watch_directories($config, $inotify, \%watch_handlers);
+
+$inotify->blocking($config->val('global', 'block'));
+my $SLEEP = $config->val('global', 'sleep');
+
+# support for non-blocking, polling mode
+while ( $keep_going ) {
+  $inotify->poll;
+  
+  sleep $SLEEP if $SLEEP;
+}
+
+=pod
+
+=head1 NAME
+
+ inotify.pl
+
+=head1 SYNOPSIS
+
+ @libexecdir@/inotify.pl --config=inotify.cfg
+
+=head1 DESCRIPTION
+
+Perl driver for C<Workflow::Inotify::Handler> classes.  This is
+typically launched as a daemon by the F<inotifyd> script.
+
+See C<perldoc Workflow::Inotify::Handler>.
+
+=head1 AUTHOR
+
+Rob Lauer - <rlauer6@comast.net>
+
+=head1 SEE ALSO 
+
+L</Linux::Inotify1>
+
+=cut
+
