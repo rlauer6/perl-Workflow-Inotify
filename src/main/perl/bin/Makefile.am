@@ -105,7 +105,7 @@ $(G1MANPAGES): %.1man : %.pl
 
 README.md: inotify.pl
 	pod2markdown $< > $@
-	echo cp $@ $(abs_top_builddir)/$$(basename $@)
+	cp $@ $(abs_top_builddir)/$$(basename $@)
 
 .PHONY: clean-local
 clean-local:

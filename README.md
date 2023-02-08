@@ -69,6 +69,12 @@ Sections are described below.
 
         default: true
 
+    - daemonize
+
+        Boolean that indicates whether the script should be daemonize using [Proc::Daemon](https://metacpan.org/pod/Proc%3A%3ADaemon).
+
+        default: false
+
 - `[watch_{name}]`
 
     The `watch` section contains settings for the directories to watch.
@@ -118,4 +124,4 @@ Rob Lauer - <rlauer6@comast.net>
 
 # SEE ALSO 
 
-["Linux::Inotify2"](#linux-inotify2)
+[Linux::Inotify2](https://metacpan.org/pod/Linux%3A%3AInotify2)
