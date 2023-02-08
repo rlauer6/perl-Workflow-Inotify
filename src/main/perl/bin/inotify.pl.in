@@ -1,164 +1,484 @@
 #!@perlrun@
 
-use warnings;
 use strict;
+use warnings;
 
 use Carp;
 use Config::IniFiles;
-
 use Data::Dumper;
+use English qw(-no_match_vars);
 use Getopt::Long;
-
 use IO::Handle;
 use Linux::Inotify2;
-
+use List::Util qw(none any);
 use Proc::Daemon;
 use Proc::PID::File;
 
-sub setup_signal_handlers {
-  my $keep_going = shift;
+use Readonly;
 
-  $SIG{HUP}  = sub { 
-    print STDERR "Caught SIGHUP:  nothing implemented.\n"; 
-    
-    $$keep_going = 1;
+Readonly our $TRUE  => 1;
+Readonly our $FALSE => 0;
+
+Readonly::Hash our %EVENTS => (
+  IN_ACCESS        => IN_ACCESS,
+  IN_ATTRIB        => IN_ATTRIB,
+  IN_CLOSE_WRITE   => IN_CLOSE_WRITE,
+  IN_CLOSE_NOWRITE => IN_CLOSE_NOWRITE,
+  IN_CREATE        => IN_CREATE,
+  IN_DELETE        => IN_DELETE,
+  IN_DELETE_SELF   => IN_DELETE_SELF,
+  IN_MODIFY        => IN_MODIFY,
+  IN_MOVE_SELF     => IN_MOVE_SELF,
+  IN_MOVED_FROM    => IN_MOVED_FROM,
+  IN_MOVED_TO      => IN_MOVED_TO,
+  IN_OPEN          => IN_OPEN,
+);
+
+our $VERSION = '@PACKAGE_VERSION@'; ## no critic (RequireInterpolationOfMetachars)
+
+our %WATCH_HANDLERS;
+our $KEEP_GOING = $TRUE;
+our $CONFIG;
+our $VERBOSE;
+our %OPTIONS;
+our $INOTIFY;
+
+########################################################################
+sub setup_signal_handlers {
+########################################################################
+
+  ## no critic (RequireLocalizedPunctuationVars)
+
+  $SIG{HUP} = sub {
+
+    print {*STDERR} "Caught SIGHUP:  \n";
+
+    print {*STDERR} "...removing handlers\n";
+
+    cleanup_handlers();
+
+    print {*STDERR} "...re-reading config file\n";
+
+    init_from_config();
+
+    print {*STDERR} "...setting up handlers\n";
+
+    setup_watch_handlers();
+
+    print {*STDERR} "...restarting\n";
+
+    $KEEP_GOING = $TRUE;
   };
 
-  $SIG{INT}  = sub { print STDERR ("Caught SIGINT:  exiting gracefully\n");
-		     $$keep_going = 0; 
-		   };
+  $SIG{INT} = sub {
+    print {*STDERR} ("Caught SIGINT:  exiting gracefully\n");
+    $KEEP_GOING = $FALSE;
+  };
 
-  $SIG{QUIT} = sub { print STDERR ("Caught SIGQUIT:  exiting gracefully\n"); 
-		     $$keep_going = 0; 
-		   };
-  
-  $SIG{TERM} = sub { print STDERR ("Caught SIGTERM:  exiting gracefully\n"); 
-		     $$keep_going = 0;
-		   };
+  $SIG{QUIT} = sub {
+    print {*STDERR} ("Caught SIGQUIT:  exiting gracefully\n");
+    $KEEP_GOING = $FALSE;
+  };
+
+  $SIG{TERM} = sub {
+    print {*STDERR} ("Caught SIGTERM:  exiting gracefully\n");
+    $KEEP_GOING = $FALSE;
+  };
+
+  return;
 }
 
-sub setup_watch_directories {
-  my $config = shift;
-  my $inotify = shift;
-  my $watch_handlers = shift;
+########################################################################
+sub msg {
+########################################################################
+  my (@msg) = @_;
 
-  my @watch_dirs = $config->Sections();
+  return if !$VERBOSE;
+
+  return print {*STDERR} "@msg\n";
+}
+
+########################################################################
+sub setup_watch_handlers {
+########################################################################
+
+  my @watch_dirs = $CONFIG->Sections();
 
   foreach my $wd (@watch_dirs) {
-    next unless $wd =~/^watch_(.*)$/;
+    next if $wd !~ /^watch_(.*)$/xsm;
+
     my $watch_name = $1;
 
-    my $events = eval $config->val($wd, 'mask');
-    die "no events specified in $wd section\n"
-      unless $events;
-    
-    my $dir = $config->val($wd, 'dir');
+    msg( sprintf '...configuring watch directory section => [%s]', $wd );
+
+    my $dir = $CONFIG->val( $wd => 'dir' );
+
     die "no directory specified for section $wd\n"
-      unless $dir;
-    
+      if !$dir;
+
     die "directory [$dir] does not exist\n"
-      unless -d $dir;
-    
-    my $handler_class = $config->val($wd, 'handler');
+      if !-d $dir;
+
+    my $event_list = $CONFIG->val( $wd => 'mask' );
+
+    my @events = split /\s*[|]\s*/xsm, $event_list;
+
+    die "no events specified in $wd section\n"
+      if !@events;
+
+    for my $e (@events) {
+      croak "not a valid event ($e)"
+        if none { $e eq $e } keys %EVENTS;
+    }
+
+    my $event_mask;
+
+    for (@events) {
+      msg( sprintf '...configuring directory [%s] with [%s] mask', $dir, $_ );
+
+      $event_mask |= $EVENTS{$_};
+    }
+
+    my $handler_class = $CONFIG->val( $wd => 'handler' );
+
     die "no handler defined\n"
-      unless $handler_class;
-    
+      if !$handler_class;
+
     # get the handler for this directory and set up the callback
-    my $handler;
-    
-    eval "require $handler_class;";
-    die $@
-      if $@;
-    
-    eval "\$handler = $handler_class->new(\$config);";
-    die $@
-      if $@;
+
+    my $handler_path = $handler_class;
+
+    $handler_path =~ s/::/\//gxsm;
+
+    if ( $handler_path !~ /[.]pm\z/xsm ) {
+      $handler_path = "$handler_path.pm";
+    }
+
+    eval { require $handler_path; };
+
+    die $EVAL_ERROR
+      if $EVAL_ERROR;
+
+    my $handler = $handler_class->new($CONFIG);
+
+    die $EVAL_ERROR
+      if $EVAL_ERROR;
 
     die "your class must have a handler() method\n"
-      unless $handler->can('handler');
-    
-    print STDERR "setting up handler for $dir to " . ref($handler) . "\n";
-    
-    my $w = $inotify->watch($dir, $events, sub { $handler->handler(shift); });
-    $watch_handlers->{$watch_name} = $w;
+      if !$handler->can('handler');
+
+    msg( sprintf '...setting up handler for [%s] =>  [%s]',
+      $dir, ref $handler );
+
+    my $w = $INOTIFY->watch(
+      $dir,
+      $event_mask,
+      sub {
+        $handler->handler(shift);
+      }
+    );
+
+    $WATCH_HANDLERS{$watch_name} = [ ref($handler), $w, $event_list ];
   }
+
+  return \%WATCH_HANDLERS;
 }
 
-# +-------------------------+
-# | MAIN PROGRAM START HERE |
-# +-------------------------+
+########################################################################
+sub cleanup_handlers {
+########################################################################
+  for ( keys %WATCH_HANDLERS ) {
+    $WATCH_HANDLERS{$_}->[1]->cancel();
+  }
 
-my $LOGFILE;
-my $CONFIG;
-my %watch_handlers;
-
-GetOptions("logfile=s", \$LOGFILE, "config=s", \$CONFIG);
-$CONFIG = $CONFIG || '/etc/workflow/inotify.cfg';
-
-die "no config file found!\n"
-  unless -s $CONFIG;
-
-my $config = Config::IniFiles->new(-file => $CONFIG);
-
-my $perl5lib = $config->val('global', 'perl5lib');
-push @INC, $perl5lib
-  if $perl5lib;
-
-# set up signal handlers
-my $keep_going = 1;
-
-Proc::Daemon::Init;
-
-# note that version 0.14 of Proc::Daemon will open STDOUT/STDERR and redirect to 
-# a file for you, CentOS 5 has version 0.03 which opens STDOUT/STDERR to /dev/null
-# thus we need to re-open...
-
-setup_signal_handlers( \$keep_going);
-
-autoflush STDOUT 1;
-autoflush STDERR 1;
-
-$LOGFILE = $LOGFILE || $config->val('global', 'logfile');
-open(STDOUT, '+>>' . $LOGFILE);
-open(STDERR, '+>>&STDOUT');
-
-# If already running, then exit
-if ( Proc::PID::File->running() ) {
-  exit(0);
+  return;
 }
 
-print STDERR "Starting...\n";
+########################################################################
+sub boolean {
+########################################################################
+  my ( $value, @default ) = @_;
 
-my $inotify = new Linux::Inotify2;
+  my $default_value;
 
-setup_watch_directories($config, $inotify, \%watch_handlers);
+  if (@default) {
+    $default_value = $default[0];
+  }
 
-$inotify->blocking($config->val('global', 'block'));
-my $SLEEP = $config->val('global', 'sleep');
+  $value =~ s/\s*([^ ]+)\s*/$1/xsm;
 
-# support for non-blocking, polling mode
-while ( $keep_going ) {
-  $inotify->poll;
-  
-  sleep $SLEEP if $SLEEP;
+  return $default_value
+    if !defined $value
+    && defined $default_value;
+
+  return $FALSE
+    if !defined $value || any { $value eq $_ } qw( 0 false off no );
+
+  return $TRUE
+    if any { $value eq $_ } qw( 1 true on yes );
+
+  die "invalid value ($value) for boolean variable";
 }
+
+########################################################################
+sub init_from_config {
+########################################################################
+  $CONFIG = Config::IniFiles->new( -file => $OPTIONS{config} );
+
+  $VERBOSE = boolean( $CONFIG->val( global => 'verbose' ), $TRUE );
+
+  my $perl5lib = $CONFIG->val( global => 'perl5lib' );
+
+  if ($perl5lib) {
+
+    while ( $perl5lib =~ /\$(\w+)/xsm ) {
+      my $env = $ENV{$1};
+      $perl5lib =~ s/\$$1/$env/gxsm;
+    }
+
+    push @INC, grep { !/$_/xsm } split /:/xsm, $perl5lib;
+  }
+
+  return;
+}
+
+########################################################################
+sub main {
+########################################################################
+  GetOptions( \%OPTIONS, 'logfile=s', 'config=s' );
+
+  print {*STDERR} Dumper( \%OPTIONS );
+
+  die "no config file found!\n"
+    if !-s $OPTIONS{config};
+
+  init_from_config();
+
+  my $daemonize = boolean( $CONFIG->val( global => 'daemonize', $FALSE ) );
+
+  print {*STDERR} Dumper( [ 'daemonize', $daemonize ] );
+
+  if ($daemonize) {
+    Proc::Daemon::Init;
+  }
+
+  setup_signal_handlers();
+
+  autoflush STDOUT $TRUE;
+  autoflush STDERR $TRUE;
+
+  $OPTIONS{logfile} //= $CONFIG->val( global => 'logfile' );
+
+  # note that version 0.14 of Proc::Daemon will open STDOUT/STDERR and
+  # redirect to a file for you, CentOS 5 has version 0.03 which opens
+  # STDOUT/STDERR to /dev/null thus we need to re-open...
+
+  if ( $OPTIONS{logfile} ) {
+    open STDOUT, '+>>', $OPTIONS{logfile};
+    open STDERR, '+>>&STDOUT'; ## no critic (ProhibitAmpersandSigils)
+  }
+
+  # If already running, then exit
+  if ( $daemonize && Proc::PID::File->running() ) {
+    msg('already running...');
+    exit 0;
+  }
+
+  $INOTIFY = Linux::Inotify2->new;
+
+  setup_watch_handlers();
+
+  return run();
+}
+
+########################################################################
+sub run {
+########################################################################
+  msg( sprintf "...configuration complete at [%s]\n", scalar localtime );
+
+  my $block = boolean( $CONFIG->val( global => 'block' ), $TRUE );
+
+  my $sleep = $CONFIG->val( global => 'sleep' );
+
+  $INOTIFY->blocking($block);
+
+  if ($VERBOSE) {
+    msg('---------------------------');
+    msg('Starting inotify polling...');
+    msg('---------------------------');
+    msg( '  blocking: ', $block ? 'true' : 'false' );
+    msg( '     sleep: ', $sleep ? $sleep : 'no' );
+    msg('  handlers: ');
+
+    foreach ( keys %WATCH_HANDLERS ) {
+      msg( '            name   : ', $_ );
+      msg( '            handler: ', $WATCH_HANDLERS{$_}->[0] );
+      msg( '            events : ', $WATCH_HANDLERS{$_}->[2] );
+    }
+
+    msg( "      \@INC:\n          :", join "\n          : ", @INC );
+
+    msg("---------------------------\n");
+  }
+
+  # support for non-blocking, polling mode
+  while ($KEEP_GOING) {
+    $INOTIFY->poll;
+
+    if ($sleep) {
+      sleep $sleep;
+    }
+  }
+
+  # clean up handlers...
+  msg('...cleaning up handlers');
+
+  cleanup_handlers();
+
+  return;
+}
+
+main();
+
+1;
+
+__END__
+
+## no critic (RequirePodSections)
 
 =pod
 
 =head1 NAME
 
- inotify.pl
+inotify.pl - script to daemonize a C<Linux::Inotify2> handler
 
 =head1 SYNOPSIS
 
- @libexecdir@/inotify.pl --config=inotify.cfg
+ inotify.pl --config=inotify.cfg
 
 =head1 DESCRIPTION
 
-Perl driver for C<Workflow::Inotify::Handler> classes.  This is
-typically launched as a daemon by the F<inotifyd> script.
+Script harness for C<Workflow::Inotify::Handler> classes.  This is
+typically launched as a daemon by the F<inotifyd> script or using a
+C<systemctl> service description.
 
-See C<perldoc Workflow::Inotify::Handler>.
+See L<Workflow::Inotify::Handler>
+
+=head1 HOW IT WORKS
+
+The C<inotify.pl> script reads a C<.ini> style configuration file and
+installs handlers implemented by Perl classes to process kernel events
+generated from file or directory changes. Using L<Linux::Inotify2>,
+the script creates instantiates one or more handlers which process
+directory events and then daemonizes this script.
+
+=head2 The Configuration File
+
+The configuration file is a C<.ini> style configuration file
+consisting of a C<[global]> section and one or more sections named
+using the convention: C<[watch_{name}]>. Boolean values can be set as
+'0', '1', 'true', 'fals'e, 'on' or 'off'. Take your pick.
+
+Sections are described below.
+
+=over
+
+=item C<[global]>
+
+The C<global> section contains configuration values used throughout
+the script. All of the values in the C<global> section are optional.
+
+=over
+
+=item * sleep
+
+Amount of time in seconds to sleep after polling for a watch event.
+
+=item * block
+
+Boolean that indicates if the watcher should block waiting for an
+event. If you set C<block> to a false value, you should also consider
+a sleep value.
+
+default: true
+
+=item * logfile
+
+Name of a file that will receive all STDERR and STDOUT messages.
+
+=item * perl5lib
+
+One or more paths to add to C<@INC>. Paths should be ':' separated.
+
+Example:
+
+ perl5lib = $HOME/lib/perl5:/usr/local/lib/perl5
+
+Word that begin with '$' are interpretted to be environment variables
+(for this variable only).
+
+=item * verbose
+
+Output messages at beginning of script.
+
+default: true
+
+=item * daemonize
+
+Boolean that indicates whether the script should be daemonize using L<Proc::Daemon>.
+
+default: false
+
+=back
+
+=item C<[watch_{name}]>
+
+The C<watch> section contains settings for the directories to watch.
+
+=over
+
+=item * dir
+
+Directory to watch.
+
+Example:
+
+ [watch_example]
+
+ dir =  I</var/spool/junk>.
+
+=item * mask
+
+One or more C<inotify> event names as described in I<man 7
+inotify>. These events should be pipe delimited (as in "oring" them
+together).
+
+Example:
+
+ mask = IN_MOVED_FROM | IN_MOVED_TO
+
+These are also described in L<Workflow::Inotify::Handler>.
+
+=item * handler
+
+The name of a Perl class that has at least a C<handler()> method. This
+handler will be called with a L<Linux::Inotify::Event> object.
+
+Example:
+
+ handler = Workflow::Inotify::Handler
+
+=back
+
+=back
+
+=head1 VERSION
+
+This documentation refers to version @PACKAGE_VERSION@
+
+=head1 REPOSITORY
+
+L<https://github.com/rlauer6/perl-Workflow-Inotify.git>
 
 =head1 AUTHOR
 
@@ -166,7 +486,6 @@ Rob Lauer - <rlauer6@comast.net>
 
 =head1 SEE ALSO 
 
-L</Linux::Inotify1>
+L</Linux::Inotify2>
 
 =cut
-

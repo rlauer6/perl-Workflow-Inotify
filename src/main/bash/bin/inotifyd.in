@@ -1,7 +1,8 @@
 #!@bashrun@
+# -*- mode: sh; -*-
 
 # chkconfig: 2345 99 1
-# description: directory watch daemion
+# description: directory watch daemon
 # processname: inotifyd
 # pidfile: /var/run/inotifyd.pid
 

@@ -1,4 +1,12 @@
-AC_INIT([perl-Workflow-Inotify], [1.0.0], [rlauer6@comcast.net], [perl-Workflow-Inotify])
+AC_INIT([perl-Workflow-Inotify],
+        m4_esyscmd_s([
+if test -z "$VERSION"; then \
+  VERSION=$(test -e VERSION && cat VERSION); \
+  VERSION=${VERSION:-0.0.0}; \
+fi; \
+echo $VERSION
+]),
+        m4_esyscmd_s([if test -z "$EMAIL"; then EMAIL=rlauer6@comcast.net; fi; echo $EMAIL]),[perl-Workflow-Inotify])
 
 __poor_mans_expand_file_name () {
     _tmp_name=$1
@@ -29,6 +37,7 @@ __poor_mans_expand_file_name () {
 do_subst_command='do_subst = sed \
   -e '"'"'s,[@]PACKAGE[@],$(PACKAGE),g'"'"' \
   -e '"'"'s,[@]VERSION[@],$(VERSION),g'"'"' \
+  -e '"'"'s,[@]PACKAGE_VERSION[@],$(PACKAGE_VERSION),g'"'"' \
   -e '"'"'s,[@]PATH_SEPARATOR[@],$(PATH_SEPARATOR),g'"'"' \
   -e '"'"'s~[@]configure_input[@]~Generated from $@.in; do not edit by hand.~g'"'"' \
   -e "s,[@]BUILD_DATE[@],$$(date '"'"'+%Y-%m-%d %H:%M:%S'"'"'),g" \
@@ -92,6 +101,26 @@ if test -z "$PERL" ; then
   AC_MSG_ERROR([perl not found?])
 fi
 
+AC_PATH_PROG([MAKE_CPAN_DIST],
+	[make-cpan-dist.pl])
+
+if test -z "$MAKE_CPAN_DIST" ; then 
+  AC_MSG_WARN([make-cpan-dist not found...you won't be able to create a CPAN distribution])
+fi
+AC_PATH_PROG([POD2MARKDOWN],
+	[pod2markdown])
+
+if test -z "$POD2MARKDOWN" ; then 
+  AC_MSG_ERROR([pod2markdown  not found?])
+fi
+
+AC_PATH_PROG([SCANDEPS],
+	[scandepsx-static.pl])
+
+if test -z "$SCANDEPS" ; then 
+  AC_MSG_WARN([scandeps-static.pl not found...you won't be able generate project requirements])
+fi
+
 perl5libdir=\${datadir}/perl5
 AC_ARG_WITH(
 	[perl5libdir],[  --with-perl5libdir (defaults to [DATAROOTDIR]/perl5)],
@@ -109,7 +138,8 @@ AC_ARG_WITH(
 AC_SUBST([perl5libdir])
 
 dnl something just to make autoconf include the autotools/ads_ stuff in the distribution
-ads_PERL_MODULE([Getopt::Long])
+ads_PERL_MODULE([Linux::Inotify2])
+ads_PERL_MODULE([Proc::PID::File])
 
 AX_DISTCHECK_HACK
 AX_DEPS_CHECK
@@ -119,6 +149,7 @@ RPM_BUILD_MODE
 
 AC_CONFIG_FILES([
     Makefile
+    cpan/Makefile
     src/Makefile
     src/main/Makefile
     src/main/perl/Makefile
@@ -145,3 +176,4 @@ printf "\n"
 printf "                          perl: %s\n" "`__poor_mans_expand_file_name PERL`"
 printf "                          bash: %s\n" "`__poor_mans_expand_file_name BASHRUN`"
 printf "\n"
+printf "               Package Version: %s\n"   "${PACKAGE_VERSION}"

@@ -1,12 +1,10 @@
-SUBDIRS = . src config
+SUBDIRS = . src config cpan
 
 ACLOCAL_AMFLAGS = -I autotools
 
 dist_noinst_DATA =  \
     README.md \
-    NEWS \
+    NEWS.md \
     ChangeLog \
     ${PACKAGE_NAME}.spec \
     ${PACKAGE_NAME}.spec.in 
-
-CLEANFILES = ${PACKAGE_NAME}.spec

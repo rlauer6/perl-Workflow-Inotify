@@ -1,0 +1,25 @@
+project:
+  description: "Linux::Inotify2 wrapper"
+  author:
+    name: Rob Lauer
+    mailto: rlauer6@comcast.net
+pm_module: Workflow::Inotify::Handler
+min-perl-version: 5.010
+dependencies:
+  requires: requires
+path:
+  pm_module: src/main/perl/lib
+  exe_files: src/main/perl/bin
+  scripts: src/main/bash/bin
+extra-files:
+  - ChangeLog
+provides:
+resources:
+  homepage: 'http://github.com/rlauer6/perl-Workflow-Inotify'
+  bugtracker:
+    web: 'http://github.com/rlauer6/perl-Workflow-Inotify/issues'
+    mailto: rlauer6@comcast.net
+  repository:
+    url: 'git://github.com/rlauer6/perl-Workflow-Inotify.git'
+    web: 'http://github.com/rlauer6/perl-Workflow-Inotify'
+    type: 'git'
