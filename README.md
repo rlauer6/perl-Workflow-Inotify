@@ -26,8 +26,23 @@ directory events and then daemonizes this script.
 
 The configuration file is a `.ini` style configuration file
 consisting of a `[global]` section and one or more sections named
-using the convention: `[watch_{name}]`. Boolean values can be set as
-'0', '1', 'true', 'fals'e, 'on' or 'off'. Take your pick.
+using the convention: `[watch_{name}]`.
+
+Boolean values can be set as '0', '1', 'true', 'false', 'on', 'off',
+'yes', or 'no'. Take your pick.
+
+Example:
+
+    [global]
+    daemonize = yes
+    logfile = /var/log/inotify.log
+    block = yes
+    perl5lib = $HOME/lib/perl5
+    
+    [watch_tmp]
+    dir = /tmp
+    mask = IN_MOVE_TO | IN_CLOSE_WRITE
+    handler = Workflow::Inotify::Handler
 
 Sections are described below.
 
@@ -60,7 +75,7 @@ Sections are described below.
 
             perl5lib = $HOME/lib/perl5:/usr/local/lib/perl5
 
-        Word that begin with '$' are interpretted to be environment variables
+        Words that begin with '$' are interpretted to be environment variables
         (for this variable only).
 
     - verbose
