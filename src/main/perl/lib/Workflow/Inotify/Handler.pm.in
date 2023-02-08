@@ -88,10 +88,10 @@ constructor.
 
 I<....from C<man 7 inotify>...>
 
-The inotify_add_watch(2) mask argument and the mask field of the
-inotify_event structure returned when read(2)ing an inotify file
-descriptor are both bit masks identifying inotify events.  The
-following bits can be specified in mask when calling
+The inotify_add_watch(2) mask argument and the mask
+field of the inotify_event structure returned when read(2)ing an
+inotify file descriptor are both bit masks identifying inotify events.
+The following bits can be specified in mask when calling
 inotify_add_watch(2) and may be returned in the mask field returned by
 read(2):
 
@@ -143,13 +143,11 @@ Watched file/directory was itself moved.
 
 =item * IN_MOVED_FROM (+)
 
-Generated for the directory containing the old filename when a file is
-renamed.
+Generated for the directory containing the old filename when a file is renamed.
 
 =item * IN_MOVED_TO (+)
 
-Generated for the directory containing the new filename when a file is
-renamed.
+Generated for the directory containing the new filename when a file is renamed.
 
 =item * IN_OPEN (*)
 
@@ -172,6 +170,12 @@ inside the directory (not for the directory itself).
 =head2 handler
 
  handler( event )
+
+An instance of L<Linux::Inotify::Event>.  See L<Linux::Inotify2>
+
+=back
+
+=head2 config
 
 The method of your class that will handle the event.
 
