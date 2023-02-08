@@ -486,6 +486,6 @@ Rob Lauer - <rlauer6@comast.net>
 
 =head1 SEE ALSO 
 
-L</Linux::Inotify2>
+L<Linux::Inotify2>
 
 =cut
