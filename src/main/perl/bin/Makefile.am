@@ -25,7 +25,7 @@ GPERLSCRIPTS = $(PERLSCRIPTS:.pl.in=.pl)
 G1MANPAGES = $(GPERLSCRIPTS:.pl=.1man)
 
 libexec_SCRIPTS = $(GPERLSCRIPTS)
-dist_noinst_DATA = $(PERLSCRIPTS)
+dist_noinst_DATA = $(PERLSCRIPTS) README.md
 
 man1_MANS = $(G1MANPAGES)
 
@@ -88,6 +88,7 @@ $(GPERLSCRIPTS): % : %.in
 	test -d "$$(dirname "$@")" || $(INSTALL) -d "$$(dirname "$@")"
 	$(do_subst) $< > $@
 	$(perlwc) $(PERLINCLUDE) -wc $@ || { rm $@ && exit 1; }
+	chmod +x $@
 
 all:
 
@@ -101,6 +102,9 @@ $(G1MANPAGES): %.1man : %.pl
 	--name="$${tname}" \
 	--release=$(PACKAGE)-$(VERSION) \
 	--section=1man > "$${target_name}"
+
+README.md: inotify.pl
+	pod2markdown $< > README.md
 
 .PHONY: clean-local
 clean-local:

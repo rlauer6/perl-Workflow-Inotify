@@ -1,0 +1,7 @@
+Config::IniFiles   3.000003
+Linux::Inotify2    2.3
+List::Util         1.33
+Proc::Daemon       0.23
+Proc::PID::File    1.29
+Readonly           2.05
+Class::Accessor::Fast   0.51

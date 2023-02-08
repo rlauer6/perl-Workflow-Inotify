@@ -1,4 +1,4 @@
-SUBDIRS = . src config
+SUBDIRS = . src config cpan
 
 ACLOCAL_AMFLAGS = -I autotools
 
@@ -8,5 +8,3 @@ dist_noinst_DATA =  \
     ChangeLog \
     ${PACKAGE_NAME}.spec \
     ${PACKAGE_NAME}.spec.in 
-
-CLEANFILES = ${PACKAGE_NAME}.spec
