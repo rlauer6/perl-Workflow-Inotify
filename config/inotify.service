@@ -6,7 +6,7 @@ After=network.target
 Type=forking
 user=root
 WorkingDirectory=/root
-ExecStart=perl -I /home/rclauer/lib/perl5 /home/rclauer/bin/inotify.pl --config=/home/rclauer/workflow/config.d/example.cfg
+ExecStart=perl -I /home/rclauer/lib/perl5 /home/rclauer/bin/inotify.pl --config=/home/rclauer/workflow/config.d/upload.cfg
 Restart=always
 ExecReload=kill -HUP $MAINPID
 

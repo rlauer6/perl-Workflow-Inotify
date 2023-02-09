@@ -25,7 +25,7 @@ GPERLSCRIPTS = $(PERLSCRIPTS:.pl.in=.pl)
 G1MANPAGES = $(GPERLSCRIPTS:.pl=.1man)
 
 libexec_SCRIPTS = $(GPERLSCRIPTS)
-dist_noinst_DATA = $(PERLSCRIPTS) README.md
+dist_noinst_DATA = $(PERLSCRIPTS)
 
 man1_MANS = $(G1MANPAGES)
 
@@ -92,7 +92,9 @@ $(GPERLSCRIPTS): % : %.in
 
 all:
 
-CLEANFILES = $(GPERLSCRIPTS) $(G1MANPAGES) README.md
+CLEANFILES = \
+    $(GPERLSCRIPTS) \
+    $(G1MANPAGES)
 
 $(G1MANPAGES): %.1man : %.pl
 	target_name="$@" ;\
@@ -101,11 +103,7 @@ $(G1MANPAGES): %.1man : %.pl
 	--center="$(PACKAGE)" \
 	--name="$${tname}" \
 	--release=$(PACKAGE)-$(VERSION) \
-	--section=1man > "$${target_name}"
-
-README.md: inotify.pl
-	pod2markdown $< > $@
-	cp $@ $(abs_top_builddir)/$$(basename $@)
+	--section=1man > "$${target_name}" | true
 
 .PHONY: clean-local
 clean-local:

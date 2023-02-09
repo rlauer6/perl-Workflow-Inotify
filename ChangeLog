@@ -1,3 +1,20 @@
+Thu Feb  9 14:30:38 2023  Rob Lauer  <rlauer6@comcast.net>>
+
+	[1.0.2]:
+	* configure.ac: remove warnings as errors
+	* config/inotify.service: example.cfg -> upload.cfg
+	* src/main/perl/bin/Makefile.am
+	- moved README.md generation to src/main/perl/lib
+	* src/main/perl/bin/inotify.pl.in
+	- help
+	- fixed @INC hack
+	* src/main/perl/lib/Makefile.am: add above to build
+	* src/main/perl/lib/Workflow/Inotify.pm.in: new
+	* cpan/buildspec.yml: package name Workflow::Inotify now
+	* .gitignore
+	- src/main/perl/lib/README.md
+	- cpan/provides
+
 Wed Feb  8 10:02:14 2023  Rob Lauer  <rlauer6@comcast.net>
 
 	[1.0.1]:

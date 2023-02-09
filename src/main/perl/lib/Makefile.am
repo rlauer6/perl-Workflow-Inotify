@@ -20,18 +20,28 @@ logdir = @localstatedir@/log
 PERLMODULES = 
 
 WORKFLOWMODULES = \
+    Workflow/Inotify.pm.in
+
+WORKFLOW_INOTIFYMODULES = \
     Workflow/Inotify/Handler.pm.in
 
-GPERLMODULES = $(PERLMODULES:.pm.in=.pm)
-GWORKFLOWMODULES = $(WORKFLOWMODULES:.pm.in=.pm)
+GPERLMODULES             = $(PERLMODULES:.pm.in=.pm)
+GWORKFLOWMODULES         = $(WORKFLOWMODULES:.pm.in=.pm)
+GWORKFLOW_INOTIFYMODULES = $(WORKFLOW_INOTIFYMODULES:.pm.in=.pm)
 
 G1MANPAGES = $(GPERLSCRIPTS:.pm=.1man)
 
-workflowdir = $(perl5libdir)/Workflow/Inotify
-workflow_DATA = $(GWORKFLOWMODULES)
+workflowdir         = $(perl5libdir)/Workflow
+workflow_inotifydir = $(perl5libdir)/Workflow/Inotify
 
-perl5lib_DATA = $(GPERLMODULES)
-dist_noinst_DATA = $(PERLMODULES) $(WORKFLOWMODULES)
+workflow_DATA         = $(GWORKFLOWMODULES)
+workflow_inotify_DATA = $(GWORKFLOW_INOTIFYMODULES)
+perl5lib_DATA         = $(GPERLMODULES)
+
+dist_noinst_DATA = \
+    $(PERLMODULES) \
+    $(WORKFLOWMODULES) \
+    $(WORKFLOW_INOTIFYMODULES)
 
 man1_MANS = $(G1MANPAGES)
 
@@ -49,18 +59,22 @@ PERLINCLUDE = \
     $(PERL5_EXTRA_INCLUDES) \
     -I $(perl5libdir)
 
-$(GPERLMODULES): % : %.in 
+%.pm:  %.pm.in
 	test -d "$$(dirname "$@")" || $(INSTALL) -d "$$(dirname "$@")"
 	$(do_subst) $< > $@
 	$(perlwc) $(PERLINCLUDE) -wc $@ || { rm $@ && exit 1; }
 
-$(GWORKFLOWMODULES): % : %.in 
-	test -d "$$(dirname "$@")" || $(INSTALL) -d "$$(dirname "$@")"
-	$(do_subst) $< > $@
-	$(perlwc) $(PERLINCLUDE) -wc $@ || { rm $@ && exit 1; }
-all:
+all: README.md
 
-CLEANFILES = $(GPERLMODULES) $(GWORKFLOWMODULES)
+CLEANFILES = \
+    $(GPERLMODULES) \
+    $(GWORKFLOWMODULES) \
+    $(GWORKFLOW_INOTIFYMODULES) \
+    README.md
+
+README.md: $(GWORKFLOWMODULES)
+	pod2markdown $< > $@
+	cp $@ $(abs_top_builddir)/$$(basename $@)
 
 $(G1MANPAGES): %.1man : %.pm
 	target_name="$@";\

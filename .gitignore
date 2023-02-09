@@ -1,3 +1,5 @@
+cpan/provides
+src/main/perl/lib/README.md
 aclocal.m4
 autotools/install-sh
 autotools/missing
