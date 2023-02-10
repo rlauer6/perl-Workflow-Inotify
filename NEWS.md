@@ -8,9 +8,25 @@ fixed will be noted here, as well.
 
 ---
 
-# perl-Workflow-Inotify 1.0.0 (2016-05-13)
+# perl-Workflow-Inotify 1.0.3 (2023-02-10)
 
-> Initial release
+> This version adds a feature that will create setters/getters if the
+> configuration file contains a section using the a canonical version
+> of the handler name (lower and snaked case).
+
+## Enhancements
+
+* create accessors if a section exists in the configuration file named
+  after the handler class (example: `[workflow_inotify_handler]`)
+
+## Fixes
+
+_None_
+
+# perl-Workflow-Inotify 1.0.2 (2023-02-09)
+
+> This version moves the documentation from `inotify.pl` to
+> `Workflow::Inotify` in anticipation releasing to CPAN
 
 ## Enhancements
 
@@ -42,3 +58,16 @@ _None_
 ## Fixes
 
 _None_
+
+# perl-Workflow-Inotify 1.0.0 (2016-05-13)
+
+> Initial release
+
+## Enhancements
+
+_None_
+
+## Fixes
+
+_None_
+

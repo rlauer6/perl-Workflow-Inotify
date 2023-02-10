@@ -245,8 +245,6 @@ sub init_from_config {
     }
   }
 
-  print {*STDERR} Dumper( [ 'perl5lib', $perl5lib, \@INC ] );
-
   return;
 }
 
