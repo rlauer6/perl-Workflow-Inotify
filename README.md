@@ -127,7 +127,7 @@ Sections are described below.
 
 # VERSION
 
-This documentation refers to version 1.0.2
+This documentation refers to version 1.0.3
 
 # REPOSITORY
 

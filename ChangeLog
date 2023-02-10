@@ -1,3 +1,17 @@
+Fri Feb 10 10:40:18 2023  Rob Lauer  <rlauer6@comcast.net>
+
+	[1.0.3]:
+	* VERSION: bump
+	* NEWS.md: updated
+	* src/main/perl/bin/inotify.pl.in
+	- removed debug message
+	* src/main/perl/lib/Workflow/Inotify/Handler.pm.in
+	- create accessors from values in handler's configuration section
+	- updated pod to explain new feature
+	(new)
+	- read config file if object passed is a config file name
+	(get_app_config): new
+
 Thu Feb  9 14:30:38 2023  Rob Lauer  <rlauer6@comcast.net>>
 
 	[1.0.2]:
