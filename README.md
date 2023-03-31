@@ -125,9 +125,25 @@ Sections are described below.
 
             handler = Workflow::Inotify::Handler
 
+## Application Configuration
+
+You can create a section in the configuration file that is named for
+the handler class. For example, if your handler class is
+`Worflow::S3::Uploader`, then create a section in the configuration
+file named `workflow_s3_uploader`. Place any values you wish in that
+section. The configuration object is passed to your handler's `new()`
+method so you can access the values as needed. The configuration
+object is an instance of [Config::IniFiles](https://metacpan.org/pod/Config%3A%3AIniFiles).
+
+If you use the parent class [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%3A%3AHandler), its
+`new()` method will automatically create setters and getters for these
+values.
+
+See [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%3A%3AHandler) for more details.
+
 # VERSION
 
-This documentation refers to version 1.0.3
+This documentation refers to version 1.0.4
 
 # REPOSITORY
 
@@ -135,8 +151,8 @@ This documentation refers to version 1.0.3
 
 # AUTHOR
 
-Rob Lauer - <rlauer6@comast.net>
+Rob Lauer - <rlauer6@comcast.net>
 
 # SEE ALSO 
 
-[Linux::Inotify2](https://metacpan.org/pod/Linux%3A%3AInotify2)
+[Linux::Inotify2](https://metacpan.org/pod/Linux%3A%3AInotify2), [Config::IniFiles](https://metacpan.org/pod/Config%3A%3AIniFiles)

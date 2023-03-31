@@ -8,6 +8,20 @@ fixed will be noted here, as well.
 
 ---
 
+# perl-Workflow-Inotify 1.0.4 (2023-03-31)
+
+> This version checks to make sure you do not overwrite accessors and
+> adds a new method for returning boolean values from the config object.
+
+## Enhancements
+
+* check for redefinition of accessors
+
+## Fixes
+
+* `new()` method was not loading config if scalar passed
+
+
 # perl-Workflow-Inotify 1.0.3 (2023-02-10)
 
 > This version adds a feature that will create setters/getters if the
