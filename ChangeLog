@@ -1,3 +1,13 @@
+Sat Apr  8 09:37:54 2023  Rob Lauer  <rlauer6@comcast.net>
+
+	[1.0.5]:
+	* VERSION: bump
+	* src/main/perl/lib/Workflow/Inotify/Handler.pm.in
+	(parent): Exporter, Class::Accessor::Fast
+	- Readonly $TRUE, $FALSE
+	* README.md: generated
+	* NEWS: updated
+
 Fri Mar 31 09:16:25 2023  Rob Lauer  <rlauer6@comcast.net>
 
 	[1.0.4]:

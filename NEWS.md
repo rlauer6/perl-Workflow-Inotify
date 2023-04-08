@@ -8,6 +8,20 @@ fixed will be noted here, as well.
 
 ---
 
+# perl-Workflow-Inotify 1.0.5 (2023-04-08)
+
+> This version fixes a bug that prevented `boolean()` from being
+> exported
+
+## Enhancements
+
+* None
+
+## Fixes
+
+* there were two `use parent` declarations that prevented `boolean()`
+  from being exported
+
 # perl-Workflow-Inotify 1.0.4 (2023-03-31)
 
 > This version checks to make sure you do not overwrite accessors and

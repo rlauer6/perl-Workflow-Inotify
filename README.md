@@ -143,7 +143,7 @@ See [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%
 
 # VERSION
 
-This documentation refers to version 1.0.4
+This documentation refers to version 1.0.5
 
 # REPOSITORY
 
