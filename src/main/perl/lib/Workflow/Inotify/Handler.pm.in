@@ -178,7 +178,7 @@ second argument to the constructor will be a hash containing all of
 the values in that section which will be used by the default C<new()>
 method to create accessors for each value. Accessors are named using
 the best practice of separater setters and getters for each value
-(e.g. C<get_foo(), C<set_foo()>).
+(e.g. C<get_foo()>, C<set_foo()>).
 
  [workflow_s3_uploader]
  bucket        = foo
