@@ -58,7 +58,7 @@ Example:
  
  [watch_tmp]
  dir = /tmp
- mask = IN_MOVE_TO | IN_CLOSE_WRITE
+ mask = IN_MOVED_TO | IN_CLOSE_WRITE
  handler = Workflow::Inotify::Handler
 
 Sections are described below.
