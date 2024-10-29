@@ -19,17 +19,18 @@ See [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%
 The `inotify.pl` script reads a `.ini` style configuration file and
 installs handlers implemented by Perl classes to process kernel events
 generated from file or directory changes. Using [Linux::Inotify2](https://metacpan.org/pod/Linux%3A%3AInotify2),
-the script creates instantiates one or more handlers which process
+the script instantiates one or more handlers which process
 directory events and then daemonizes this script.
 
 ## The Configuration File
 
 The configuration file is a `.ini` style configuration file
 consisting of a `[global]` section and one or more sections named
-using the convention: `[watch_{name}]`.
+using the convention: `[watch_{name}]` where `{name}` is the snake
+case representation of the directory to watch.
 
-Boolean values can be set as '0', '1', 'true', 'false', 'on', 'off',
-'yes', or 'no'. Take your pick.
+Boolean values in the configuration file can be set as '0', '1',
+'true', 'false', 'on', 'off', 'yes', or 'no'. Take your pick.
 
 Example:
 
@@ -41,7 +42,7 @@ Example:
     
     [watch_tmp]
     dir = /tmp
-    mask = IN_MOVE_TO | IN_CLOSE_WRITE
+    mask = IN_MOVED_TO | IN_CLOSE_WRITE
     handler = Workflow::Inotify::Handler
 
 Sections are described below.
@@ -76,7 +77,8 @@ Sections are described below.
             perl5lib = $HOME/lib/perl5:/usr/local/lib/perl5
 
         Words that begin with '$' are interpretted to be environment variables
-        (for this variable only).
+        (for this variable only). You can also use '~' to denote your home
+        directory ($HOME) if it is defined.
 
     - verbose
 
@@ -125,11 +127,36 @@ Sections are described below.
 
             handler = Workflow::Inotify::Handler
 
+        A typical handler might look something like this:
+
+            package MyHandler;
+            
+            use strict;
+            use warnings;
+            
+            use Data::Dumper;
+
+            use parent qw(Workflow::Inotify::Handler);
+            
+            sub new {
+              my ( $class, @args ) = @_;
+            
+              return $class->SUPER::new(@args);
+            }
+            
+            sub handler {
+              my ( $self, $event ) = @_;
+            
+              return print {*STDERR} Dumper( [ event => $event ] );
+            }
+
+        1;
+
 ## Application Configuration
 
 You can create a section in the configuration file that is named for
 the handler class. For example, if your handler class is
-`Worflow::S3::Uploader`, then create a section in the configuration
+`Workflow::S3::Uploader`, then create a section in the configuration
 file named `workflow_s3_uploader`. Place any values you wish in that
 section. The configuration object is passed to your handler's `new()`
 method so you can access the values as needed. The configuration
@@ -143,7 +170,7 @@ See [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%
 
 # VERSION
 
-This documentation refers to version 1.0.5
+This documentation refers to version 1.0.6
 
 # REPOSITORY
 
@@ -155,4 +182,4 @@ Rob Lauer - <rlauer6@comcast.net>
 
 # SEE ALSO 
 
-[Linux::Inotify2](https://metacpan.org/pod/Linux%3A%3AInotify2), [Config::IniFiles](https://metacpan.org/pod/Config%3A%3AIniFiles)
+[Linux::Inotify2](https://metacpan.org/pod/Linux%3A%3AInotify2), [Config::IniFiles](https://metacpan.org/pod/Config%3A%3AIniFiles), [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%3A%3AHandler)

@@ -117,6 +117,9 @@ clean-generated-man-pages:
 	test $$? -eq 0 || exit 1 ;\
 	done
 
+test: $(builddir)/../lib/Workflow/Inotify/Handler.pm $(builddir)/inotify.pl
+	prove -I $(builddir)/../lib -v t/
+
 if DISTCHECK_HACK
 else
 endif

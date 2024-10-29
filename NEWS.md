@@ -8,6 +8,22 @@ fixed will be noted here, as well.
 
 ---
 
+# perl-Workflow-Inotify 1.0.5 (2024-10-28)
+
+> This version adds some minor enhancements, simple unit tests and
+> fixes some pod issues
+
+## Enhancements
+
+* pod updates
+* unit tests
+* don't close STDOUT, STDERR if no logfile defined
+* allow ~ to indicate HOME directory
+
+## Fixes
+
+* None
+
 # perl-Workflow-Inotify 1.0.5 (2023-04-08)
 
 > This version fixes a bug that prevented `boolean()` from being
