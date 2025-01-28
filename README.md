@@ -54,13 +54,16 @@ Sections are described below.
 
     - sleep
 
-        Amount of time in seconds to sleep after polling for a watch event.
+        Amount of time in seconds to sleep after polling for a watch event. If
+        you do not specify a value for sleep and you set `block` to a false
+        value, then the sleep time will automatically be 1 second otherwise
+        this script would consume 100% of the CPU. ;-)
 
     - block
 
         Boolean that indicates if the watcher should block waiting for an
         event. If you set `block` to a false value, you should also consider
-        a sleep value.
+        a sleep value of a least 1 second.
 
         default: true
 
@@ -88,9 +91,10 @@ Sections are described below.
 
     - daemonize
 
-        Boolean that indicates whether the script should be daemonize using [Proc::Daemon](https://metacpan.org/pod/Proc%3A%3ADaemon).
+        Boolean that indicates whether the script should be daemonized using
+        [Proc::Daemon](https://metacpan.org/pod/Proc%3A%3ADaemon).
 
-        default: false
+        default: true
 
 - `[watch_{name}]`
 
@@ -104,7 +108,11 @@ Sections are described below.
 
             [watch_example]
 
-            dir =  I</var/spool/junk>.
+            dir =  /var/spool/junk
+
+        _Note: events on files in subdirectories will not generate
+        events. You must explicitly include those subdirectories if you want
+        them watched._
 
     - mask
 
@@ -117,6 +125,9 @@ Sections are described below.
             mask = IN_MOVED_FROM | IN_MOVED_TO
 
         These are also described in [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%3A%3AHandler).
+
+        You can also use the mask value of 'IN\_ALL' which will trigger your
+        handler for all events that are supported by `inotify`.
 
     - handler
 
@@ -170,7 +181,7 @@ See [Workflow::Inotify::Handler](https://metacpan.org/pod/Workflow%3A%3AInotify%
 
 # VERSION
 
-This documentation refers to version 1.0.6
+This documentation refers to version 1.0.7
 
 # REPOSITORY
 
